@@ -1,0 +1,179 @@
+---
+title: "Relational Data Exercises"
+author: "Nick Betts"
+date: "October 31, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(nycflights13)
+library(Lahman)
+library(babynames)
+library(nasaweather)
+library(fueleconomy)
+library(ggplot2)
+```
+
+#Relational Data
+##Exercise 13.2.1
+1. Imagine you wanted to draw (approximately) the route each plane flies from its origin to its destination. What variables would you need? What tables would you need to combine?
+
+You would need the variables "origin" and "dest" from the flights table in order to figure out which airports the plane will be travelling between. Also, you would need the variables "lat" and "lon" from the airports table in order to help determine the actual path that the plane follows on a map. The tables you would need to combine would be flights and airports from the nycflights13 data set.
+
+```{r}
+airports
+```
+
+
+2. I forgot to draw the relationship between weather and airports. What is the relationship and how should it appear in the diagram?
+
+The variable "origin" from weather would have to connect to "faa" in airports. This would connect the airport origin with the airport FAA airport code. 
+
+```{r}
+weather
+airports
+```
+
+
+3. weather only contains information for the origin (NYC) airports. If it contained weather records for all airports in the USA, what additional relation would it define with flights?
+
+Add an additional combination between weather and flights where year, month, day, hour, and origin in weather match with year, month, day, hour, and dest in flights.
+
+4. We know that some days of the year are “special”, and fewer people than usual fly on them. How might you represent that data as a data frame? What would be the primary keys of that table? How would it connect to the existing tables?
+
+We would need to define a table of "special" dates where less people travel. We would have to do a little research to find these days in order to make an accurate table. The primary key for this table would be the date and it would connect to flights matching month, day, and year from both tables.
+
+
+
+
+##Exercise 13.3.1
+1. Add a surrogate key to flights.
+
+To make a primary key for flights we need a way to identify a specific flight. So I'm going to make a flight_id variable which will serve as the primary key.
+
+Flights is commented out so it doesn't generate during knitting. This was used for observational purposes.
+```{r}
+#flights
+```
+In order to identify a specific flight I think it would be essential to identify a specific year, month, day combination alongside departure time, carrier, and flight. This will give us each unique flight in the data set.
+
+```{r}
+flights %>%
+  
+  select(year, month, day, dep_time, carrier, flight) %>%
+  
+    mutate(flight_id = row_number())
+```
+
+
+Identify the keys in the following datasets
+
+Lahman::Batting
+The primary key for Lahman::Batting is playerID, yearID, and stint.
+```{r}
+#Batting
+```
+
+
+babynames::babynames
+
+The primary key for babynames::babynames would be year, sex, and name.
+
+```{r}
+#babynames
+```
+
+
+nasaweather::atmos
+
+The primary key for nasaweather::atmos would be lat, long, year, and month.
+```{r}
+#atmos
+```
+
+
+
+
+fueleconomy::vehicles
+
+The primary key for fueleconomy::vehicles is id. Any specific car in the table can simply be pulled out using the id.
+```{r}
+#vehicles
+```
+
+
+
+
+ggplot2::diamonds
+
+There really isn't a primary key for this table. There isn't really a way as it stands to identify one specific diamond.
+
+```{r}
+#diamonds
+```
+
+
+
+
+
+3. Draw a diagram illustrating the connections between the Batting, Master, and Salaries tables in the Lahman package. Draw another diagram that shows the relationship between Master, Managers, AwardsManagers.
+
+
+
+```{r}
+#Salaries
+#Batting
+```
+
+
+How would you characterise the relationship between the Batting, Pitching, and Fielding tables?
+
+
+
+##Exercise 13.4.6
+
+1.Compute the average delay by destination, then join on the airports data frame so you can show the spatial distribution of delays. Here’s an easy way to draw a map of the United States:
+
+```{r}
+airports %>%
+  semi_join(flights, c("faa" = "dest")) %>%
+  ggplot(aes(lon, lat)) +
+    borders("state") +
+    geom_point() +
+    coord_quickmap()
+```
+###Computing average delay
+```{r}
+average_dest_delay <- flights %>%
+  
+  group_by(dest) %>%
+  
+    summarise(delay = mean(arr_delay, na.rm = TRUE)) %>%
+  
+      inner_join(airports, by = c(dest = "faa"))
+
+average_dest_delay %>%
+  
+   ggplot(mapping = aes(lon, lat, color = delay)) + borders("state") + geom_point() + coord_quickmap()
+  
+  
+     
+```
+
+2. Add the location of the origin and destination (i.e. the lat and lon) to flights.
+
+```{r}
+flights %>%
+  
+  left_join(airports, by = c(dest = "faa")) %>%
+  left_join(airports, by = c(origin = "faa"))
+```
+
+
+3. Is there a relationship between the age of a plane and its delays?
+
+4. What weather conditions make it more likely to see a delay?
+
+5. What happened on June 13 2013? Display the spatial pattern of delays, and then use Google to cross-reference with the weather.
